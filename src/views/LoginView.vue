@@ -12,7 +12,7 @@
     </div>
 
     <div class="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
-      <form class="space-y-6" action="#" method="POST">
+      <form class="space-y-6" action="#" @submit.prevent="handleSubmit" novalidate>
         <div>
           <label for="email" class="block text-sm font-medium leading-6 text-gray-900"
             >Email address</label
@@ -24,9 +24,11 @@
               type="email"
               autocomplete="email"
               required=""
+              v-model="form.email"
               class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
             />
           </div>
+          <span class="text-red-500" v-if="errors.email">{{ errors.email }}</span>
         </div>
 
         <div>
@@ -48,8 +50,10 @@
               autocomplete="current-password"
               required=""
               class="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+              v-model="form.password"
             />
           </div>
+          <span class="text-red-500" v-if="errors.password">{{ errors.password }}</span>
         </div>
 
         <div>
@@ -76,9 +80,64 @@
 </template>
 
 <script>
+import * as Yup from 'yup'
+import apiUrl from '@/api/index'
+
+const validationSchema = Yup.object({
+  email: Yup.string().email().required(),
+  password: Yup.string().required(),
+})
+
 export default {
   name: 'LoginView',
-  // Your component logic goes here
+  data(){
+    return {
+      form: {
+        email: '',
+        password: '',
+      },
+      errors: {
+        email: '',
+        password: '',
+      },
+    }
+  
+  },
+  watch: {
+    'form.email': function (newVal) {
+      this.validate('email');
+    },
+    'form.password': function (newVal) {
+      this.validate('password');
+    }
+  },
+  methods: {
+    async handleSubmit() {
+      // Handle form submission
+      validationSchema.validate(this.form, { abortEarly: false })
+        .then(async() => {
+          // Validation passed
+          try {
+            const response = await apiUrl.post('/auth/login', this.form)
+            console.log(response)
+          } catch (err) {
+            console.log(err)
+          }
+        })
+        .catch((err) => {
+          err.inner.forEach((error) => {
+            this.errors = { ...this.errors, [error.path]: error.message }
+          })
+        })
+    },
+    validate(field) {
+        validationSchema.validateAt(field, this.form)
+        .then(() => (this.errors[field] = ''))
+        .catch((err) => {
+          this.errors[err.path] = err.message
+        })
+    },
+  }
 }
 </script>
 

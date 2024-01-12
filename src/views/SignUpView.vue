@@ -91,7 +91,7 @@
             type="submit"
             class="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
           >
-            Sign in
+            Submit
           </button>
         </div>
       </form>
@@ -111,6 +111,7 @@
 
 <script>
 import * as Yup from 'yup'
+import apiUrl from '@/api/index'
 const ValidationSchema = Yup.object({
   firstName: Yup.string().required('First name is required'),
   lastName: Yup.string().required('Last name is required'),
@@ -157,8 +158,14 @@ export default {
     async handleSubmit() {
       // Handle form submission
       ValidationSchema.validate(this.form, { abortEarly: false })
-        .then(() => {
-         console.log(this.form)
+        .then(async() => {
+          // Validation passed
+          try {
+            const response = await apiUrl.post('/auth/signup', this.form)
+            console.log(response)
+          } catch (err) {
+            console.log(err)
+          }
         })
         .catch((err) => {
           err.inner.forEach((error) => {
