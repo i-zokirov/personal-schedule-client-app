@@ -59,7 +59,13 @@
         <div>
           <button
             type="submit"
-            class="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+            :disabled="loading"
+            :class="[
+              'flex w-full justify-center rounded-md px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2',
+              loading
+                ? 'bg-gray-500 hover:bg-gray-500'
+                : 'bg-indigo-600 hover:bg-indigo-500 focus-visible:outline-indigo-600',
+            ]"
           >
             Sign in
           </button>
@@ -80,17 +86,18 @@
 </template>
 
 <script>
+import { useAuthStore } from '@/stores/auth'
 import * as Yup from 'yup'
-import apiUrl from '@/api/index'
-
 const validationSchema = Yup.object({
   email: Yup.string().email().required(),
   password: Yup.string().required(),
 })
 
+const authStore = useAuthStore()
+
 export default {
   name: 'LoginView',
-  data(){
+  data() {
     return {
       form: {
         email: '',
@@ -100,28 +107,37 @@ export default {
         email: '',
         password: '',
       },
+      loading: false,
     }
-  
   },
   watch: {
-    'form.email': function (newVal) {
-      this.validate('email');
+    'form.email': function () {
+      this.validate('email')
     },
-    'form.password': function (newVal) {
-      this.validate('password');
-    }
+    'form.password': function () {
+      this.validate('password')
+    },
   },
   methods: {
     async handleSubmit() {
       // Handle form submission
-      validationSchema.validate(this.form, { abortEarly: false })
-        .then(async() => {
+      validationSchema
+        .validate(this.form, { abortEarly: false })
+        .then(async () => {
           // Validation passed
           try {
-            const response = await apiUrl.post('/auth/login', this.form)
-            console.log(response)
+            this.loading = true
+            await authStore.login({ email: this.form.email, password: this.form.password })
+            this.$router.push({ name: 'home' })
           } catch (err) {
+            this.loading = false
+            const errormessage =
+              err.response && err.response.data && err.response.data.message
+                ? err.response.data.message
+                : err.message
+
             console.log(err)
+            alert(errormessage)
           }
         })
         .catch((err) => {
@@ -131,13 +147,14 @@ export default {
         })
     },
     validate(field) {
-        validationSchema.validateAt(field, this.form)
+      validationSchema
+        .validateAt(field, this.form)
         .then(() => (this.errors[field] = ''))
         .catch((err) => {
           this.errors[err.path] = err.message
         })
     },
-  }
+  },
 }
 </script>
 

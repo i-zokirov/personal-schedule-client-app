@@ -89,7 +89,13 @@
         <div>
           <button
             type="submit"
-            class="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+            :disabled="loading"
+            :class="[
+              'flex w-full justify-center rounded-md px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2',
+              loading
+                ? 'bg-gray-500 hover:bg-gray-500'
+                : 'bg-indigo-600 hover:bg-indigo-500 focus-visible:outline-indigo-600',
+            ]"
           >
             Submit
           </button>
@@ -100,7 +106,7 @@
         Already have an account?
         {{ ' ' }}
         <RouterLink
-          to="/Login"
+          to="/login"
           class="font-semibold leading-6 text-indigo-600 hover:text-indigo-500"
           >Login here</RouterLink
         >
@@ -110,8 +116,8 @@
 </template>
 
 <script>
+import { useAuthStore } from '@/stores/auth'
 import * as Yup from 'yup'
-import apiUrl from '@/api/index'
 const ValidationSchema = Yup.object({
   firstName: Yup.string().required('First name is required'),
   lastName: Yup.string().required('Last name is required'),
@@ -120,6 +126,8 @@ const ValidationSchema = Yup.object({
     .min(8, 'Password must be at least 8 characters long')
     .required('Password is required'),
 })
+
+const authStore = useAuthStore()
 
 export default {
   name: 'SignUpView',
@@ -138,36 +146,52 @@ export default {
         email: '',
         password: '',
       },
+      loading: false,
     }
   },
   watch: {
-    'form.firstName': function (newVal) {
-      this.validate('firstName');
+    'form.firstName': function () {
+      this.validate('firstName')
     },
-    'form.lastName': function (newVal) {
-      this.validate('lastName');
+    'form.lastName': function () {
+      this.validate('lastName')
     },
-    'form.email': function (newVal) {
-      this.validate('email');
+    'form.email': function () {
+      this.validate('email')
     },
-    'form.password': function (newVal) {
-      this.validate('password');
-    }
+    'form.password': function () {
+      this.validate('password')
+    },
   },
   methods: {
     async handleSubmit() {
       // Handle form submission
       ValidationSchema.validate(this.form, { abortEarly: false })
-        .then(async() => {
+        .then(async () => {
           // Validation passed
           try {
-            const response = await apiUrl.post('/auth/signup', this.form)
-            console.log(response)
+            this.loading = true
+            await authStore.register({
+              email: this.form.email,
+              password: this.form.password,
+              firstName: this.form.firstName,
+              lastName: this.form.lastName,
+            })
+            this.loading = false
+            this.$router.push({ name: 'home' })
           } catch (err) {
+            this.loading = false
+            const errormessage =
+              err.response && err.response.data && err.response.data.message
+                ? err.response.data.message
+                : err.message
+
             console.log(err)
+            alert(errormessage)
           }
         })
         .catch((err) => {
+          this.loading = false
           err.inner.forEach((error) => {
             this.errors = { ...this.errors, [error.path]: error.message }
           })
