@@ -1,15 +1,18 @@
 <script setup>
 import CreateEventForm from '@/components/CreateEventForm.vue'
+import EditEventForm from '@/components/EditEventForm.vue'
 import NavbarComponent from '@/components/NavbarComponent.vue'
 import { useAuthStore } from '@/stores/auth'
+import { useEventsStore } from '@/stores/events'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import FullCalendar from '@fullcalendar/vue3'
 import { useQuery } from '@vue/apollo-composable'
 import { gql } from 'graphql-tag'
-import { nextTick, ref, watch } from 'vue'
+import { ref, watch } from 'vue'
 
+const eventsStore = useEventsStore()
 const authStore = useAuthStore()
 const ALL_LOCATIONS_QUERY = gql`
   query {
@@ -84,6 +87,13 @@ const locations = ref([])
 const events = ref([])
 const calendarRef = ref(null)
 const open = ref(false)
+const currentEvent = ref(null)
+const openEditEventForm = ref(Boolean(currentEvent.value))
+
+const closeEditEventForm = () => {
+  currentEvent.value = null
+  openEditEventForm.value = false
+}
 
 const close = () => {
   open.value = false
@@ -105,15 +115,15 @@ watch(eventsResult, (newVal) => {
       }
     })
 
-    if (calendarRef.value) {
-      const calendarApi = calendarRef.value.getApi()
-      calendarApi.removeAllEventSources()
-      calendarApi.addEventSource(formatted)
-    }
+    eventsStore.addEvents(formatted)
+  }
+})
 
-    nextTick(() => {
-      events.value = [...formatted]
-    })
+watch(eventsStore, () => {
+  if (calendarRef.value) {
+    const calendarApi = calendarRef.value.getApi()
+    calendarApi.removeAllEventSources()
+    calendarApi.addEventSource(eventsStore.events)
   }
 })
 
@@ -128,6 +138,19 @@ watch(events, (newVal) => {
     console.log(newVal)
   }
 })
+
+watch(currentEvent, (newVal) => {
+  if (newVal) {
+    openEditEventForm.value = true
+  }
+})
+
+const handleEventClick = (info) => {
+  const event = eventsStore.getEvent(info.event.id)
+  if (event) {
+    currentEvent.value = event
+  }
+}
 
 const calendarOptions = {
   plugins: [
@@ -144,15 +167,20 @@ const calendarOptions = {
   selectable: true,
   eventDisplay: 'block',
   eventResizableFromStart: true,
+  eventClick: handleEventClick,
 }
 </script>
 
 <template>
   <main>
     <NavbarComponent />
-
     <CreateEventForm :open="open" :close="close" :locations="locations" />
-
+    <EditEventForm
+      :open="openEditEventForm"
+      :close="closeEditEventForm"
+      :locations="locations"
+      :currentEvent="currentEvent"
+    />
     <div class="p-6 lg:px-8">
       <button
         type="button"
