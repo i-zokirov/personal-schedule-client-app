@@ -1,4 +1,5 @@
 <script setup>
+import CreateEventForm from '@/components/CreateEventForm.vue'
 import NavbarComponent from '@/components/NavbarComponent.vue'
 import { useAuthStore } from '@/stores/auth'
 import dayGridPlugin from '@fullcalendar/daygrid'
@@ -64,7 +65,7 @@ const variables = ref({
   input: {
     from: '2024-01-01',
     to: '2024-01-31',
-    limit: 10,
+    limit: 100,
     page: 1,
   },
 })
@@ -82,6 +83,15 @@ const { result } = useQuery(ALL_LOCATIONS_QUERY, null, {
 const locations = ref([])
 const events = ref([])
 const calendarRef = ref(null)
+const open = ref(false)
+
+const close = () => {
+  open.value = false
+}
+
+const handleOpen = () => {
+  open.value = true
+}
 
 watch(eventsResult, (newVal) => {
   if (newVal && newVal.events) {
@@ -140,7 +150,18 @@ const calendarOptions = {
 <template>
   <main>
     <NavbarComponent />
+
+    <CreateEventForm :open="open" :close="close" :locations="locations" />
+
     <div class="p-6 lg:px-8">
+      <button
+        type="button"
+        class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none"
+        @click="handleOpen"
+      >
+        Create Event
+      </button>
+
       <FullCalendar ref="calendarRef" :options="calendarOptions">
         <template v-slot:eventContent="arg">
           <b>{{ arg.timeText }}</b>
