@@ -1,9 +1,9 @@
 <script setup>
+import { UPDATE_EVENT_MUTATION } from '@/apollo/queries'
 import DialogComponent from '@/components/DialogComponent.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useEventsStore } from '@/stores/events'
 import { useMutation } from '@vue/apollo-composable'
-import { gql } from 'graphql-tag'
 import { ref, toRefs, watch } from 'vue'
 import * as Yup from 'yup'
 
@@ -17,38 +17,46 @@ const props = defineProps({
 const validationSchema = Yup.object({
   title: Yup.string().required('Title is required'),
   description: Yup.string(),
-  location: Yup.string(),
+  locationId: Yup.string(),
   startDate: Yup.string().required('Start Date is required'),
   endDate: Yup.string().required('End Date is required'),
+  emails: Yup.string(),
 })
 
 let { currentEvent } = toRefs(props)
+const disabledInput = ref(false)
+const errors = ref({})
 
 const values = ref({
+  id: '',
   title: '',
   description: '',
-  location: '',
+  locationId: '',
   startDate: '',
   endDate: '',
+  emails: '',
+  timezone: '',
 })
 
 watch(
   currentEvent,
   (newVal) => {
     if (newVal) {
+      disabledInput.value = currentEvent.value.createdBy.id !== authStore.user.id
       values.value = {
+        id: currentEvent.value.id,
         title: currentEvent.value.title,
         description: currentEvent.value.description,
-        location: currentEvent.value.location?.id ?? '',
+        locationId: currentEvent.value.location?.id ?? '',
         startDate: currentEvent.value.start.toISOString().slice(0, -8),
         endDate: currentEvent.value.end.toISOString().slice(0, -8),
+        emails: currentEvent.value.participants.map((participant) => participant.email).join(', '),
+        timezone: currentEvent.value.start.getTimezoneOffset(),
       }
     }
   },
   { immediate: true }
 )
-
-const errors = ref({})
 
 const validate = (field) => {
   validationSchema
@@ -62,29 +70,6 @@ const validate = (field) => {
 const authStore = useAuthStore()
 const eventsStore = useEventsStore()
 
-const UPDATE_EVENT_MUTATION = gql`
-  mutation UpdateEvent($input: UpdateEventInput!) {
-    updateEvent(updateEventInput: $input) {
-      id
-      title
-      description
-      startDate
-      endDate
-      location {
-        id
-        name
-      }
-      createdBy {
-        id
-        firstName
-        lastName
-      }
-      createdAt
-      updatedAt
-    }
-  }
-`
-
 const { mutate } = useMutation(UPDATE_EVENT_MUTATION, {
   context: {
     headers: {
@@ -93,11 +78,15 @@ const { mutate } = useMutation(UPDATE_EVENT_MUTATION, {
   },
   variables: {
     input: {
-      id: currentEvent.value?.id ?? '',
+      id: values.value.id,
       title: values.value.title,
       description: values.value.description,
       startDate: values.value.startDate,
       endDate: values.value.endDate,
+      locationId: values.value.locationId,
+      participants: values.value.emails
+        ? values.value.emails.split(',').map((email) => email.trim())
+        : [],
     },
   },
 })
@@ -106,14 +95,31 @@ const handleSubmit = async () => {
   try {
     await validationSchema.validate(values.value, { abortEarly: false })
 
+    const input = {
+      id: values.value.id,
+      title: values.value.title,
+      description: values.value.description,
+    }
+
+    const startDate = new Date(values.value.startDate)
+    startDate.setMinutes(startDate.getMinutes() - values.value.timezone)
+
+    const endDate = new Date(values.value.endDate)
+    endDate.setMinutes(endDate.getMinutes() - values.value.timezone)
+
+    input.startDate = startDate.toISOString()
+    input.endDate = endDate.toISOString()
+
+    if (values.value.locationId) {
+      input.locationId = values.value.locationId
+    }
+
+    if (values.value.emails) {
+      input.participants = values.value.emails.split(',').map((email) => email.trim())
+    }
+
     const response = await mutate({
-      input: {
-        id: currentEvent.value.id,
-        title: values.value.title,
-        description: values.value.description,
-        startDate: values.value.startDate,
-        endDate: values.value.endDate,
-      },
+      input,
     })
 
     if (response) {
@@ -150,6 +156,13 @@ watch(
   () => values.value.title,
   () => {
     validate('title')
+  }
+)
+
+watch(
+  () => values.value.emails,
+  () => {
+    validate('emails')
   }
 )
 
@@ -205,6 +218,7 @@ watch(
                   id="title"
                   autocomplete="title"
                   v-model="values.title"
+                  :disabled="disabledInput"
                   class="max-w-lg block w-full shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:max-w-xs sm:text-sm border-gray-300 rounded-md"
                 />
               </div>
@@ -222,6 +236,7 @@ watch(
                 <textarea
                   id="description"
                   name="description"
+                  :disabled="disabledInput"
                   rows="3"
                   v-model="values.description"
                   class="max-w-lg shadow-sm block w-full focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm border-gray-300 rounded-md"
@@ -232,17 +247,18 @@ watch(
 
             <div class="sm:col-span-3">
               <label
-                for="location"
+                for="locationId"
                 class="block text-sm font-medium text-gray-700 sm:mt-px sm:pt-2"
               >
                 Location
               </label>
               <div class="mt-1 sm:mt-0 sm:col-span-2">
                 <select
-                  id="location"
-                  name="location"
-                  v-model="values.location"
-                  autocomplete="location"
+                  id="locationId"
+                  name="locationId"
+                  v-model="values.locationId"
+                  :disabled="disabledInput"
+                  autocomplete="locationId"
                   class="max-w-lg block focus:ring-indigo-500 focus:border-indigo-500 w-full shadow-sm sm:max-w-xs sm:text-sm border-gray-300 rounded-md"
                 >
                   <option>Select a location</option>
@@ -252,7 +268,7 @@ watch(
                 </select>
               </div>
 
-              <span class="text-red-500" v-if="errors.location">{{ errors.location }}</span>
+              <span class="text-red-500" v-if="errors.locationId">{{ errors.locationId }}</span>
             </div>
 
             <div class="sm:col-span-3 flex justify-between">
@@ -268,6 +284,7 @@ watch(
                     type="datetime-local"
                     name="startDate"
                     id="startDate"
+                    :disabled="disabledInput"
                     autocomplete="startDate"
                     v-model="values.startDate"
                     class="max-w-lg block w-full shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:max-w-xs sm:text-sm border-gray-300 rounded-md"
@@ -287,6 +304,7 @@ watch(
                     type="datetime-local"
                     name="endDate"
                     id="endDate"
+                    :disabled="disabledInput"
                     autocomplete="endDate"
                     v-model="values.endDate"
                     class="max-w-lg block w-full shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:max-w-xs sm:text-sm border-gray-300 rounded-md"
@@ -295,6 +313,23 @@ watch(
                 <span class="text-red-500" v-if="errors.endDate">{{ errors.endDate }}</span>
               </div>
             </div>
+          </div>
+
+          <div class="sm:col-span-3">
+            <label for="emails" class="block text-sm font-medium text-gray-700 sm:mt-px sm:pt-2">
+              Participant emails (comma separated)
+            </label>
+            <div class="mt-1 sm:mt-0 sm:col-span-2">
+              <textarea
+                id="emails"
+                name="emails"
+                :disabled="disabledInput"
+                rows="3"
+                v-model="values.emails"
+                class="max-w-lg shadow-sm block w-full focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm border-gray-300 rounded-md"
+              ></textarea>
+            </div>
+            <span class="text-red-500" v-if="errors.emails">{{ errors.emails }}</span>
           </div>
 
           <div class="sm:flex sm:flex-row-reverse sm:px-6 mt-4">
@@ -307,8 +342,13 @@ watch(
             </button>
 
             <button
+              :disabled="disabledInput"
               type="submit"
-              class="mr-3 inline-flex justify-center w-full rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none"
+              class="mr-3 inline-flex justify-center w-full rounded-md border border-transparent shadow-sm px-4 py-2 text-base font-medium text-white focus:outline-none"
+              :class="{
+                'bg-gray-500 cursor-not-allowed': disabledInput,
+                'bg-red-600 hover:bg-indigo-700': !disabledInput,
+              }"
             >
               Save
             </button>

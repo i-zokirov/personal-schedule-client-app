@@ -132,13 +132,14 @@
 </template>
 
 <script setup>
+import { CREATE_EVENT_MUTATION } from '@/apollo/queries'
 import DialogComponent from '@/components/DialogComponent.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useEventsStore } from '@/stores/events'
 import { useMutation } from '@vue/apollo-composable'
-import { gql } from 'graphql-tag'
 import { ref, watch } from 'vue'
 import * as Yup from 'yup'
+
 const validationSchema = Yup.object({
   title: Yup.string().required('Title is required'),
   description: Yup.string(),
@@ -147,28 +148,6 @@ const validationSchema = Yup.object({
   endDate: Yup.string().required('End Date is required'),
 })
 
-const CREATE_EVENT_MUTATION = gql`
-  mutation CreateEvent($input: CreateEventInput!) {
-    createEvent(createEventInput: $input) {
-      id
-      title
-      description
-      startDate
-      endDate
-      location {
-        id
-        name
-      }
-      createdBy {
-        id
-        firstName
-        lastName
-      }
-      createdAt
-      updatedAt
-    }
-  }
-`
 const values = ref({
   title: '',
   description: '',

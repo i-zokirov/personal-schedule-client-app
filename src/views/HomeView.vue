@@ -1,58 +1,21 @@
 <script setup>
+import { ALL_LOCATIONS_QUERY, ALL_USERS_QUERY, FIND_MANY_EVENTS_QUERY } from '@/apollo/queries'
 import CreateEventForm from '@/components/CreateEventForm.vue'
 import EditEventForm from '@/components/EditEventForm.vue'
 import NavbarComponent from '@/components/NavbarComponent.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useEventsStore } from '@/stores/events'
+import { useUsersStore } from '@/stores/users'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import FullCalendar from '@fullcalendar/vue3'
 import { useQuery } from '@vue/apollo-composable'
-import { gql } from 'graphql-tag'
 import { ref, watch } from 'vue'
 
 const eventsStore = useEventsStore()
 const authStore = useAuthStore()
-const ALL_LOCATIONS_QUERY = gql`
-  query {
-    locations {
-      id
-      name
-      locationCode
-    }
-  }
-`
-
-const FIND_MANY_EVENTS_QUERY = gql`
-  query FindManyEvents($input: FindManyArgsInput) {
-    events(findManyArgsInput: $input) {
-      data {
-        id
-        title
-        description
-        startDate
-        endDate
-        location {
-          id
-          name
-        }
-        createdBy {
-          id
-          firstName
-          lastName
-        }
-        createdAt
-        updatedAt
-      }
-      meta {
-        page
-        limit
-        total
-      }
-    }
-  }
-`
+const usersStore = useUsersStore()
 
 const getEvents = (variables) => {
   return useQuery(FIND_MANY_EVENTS_QUERY, variables, {
@@ -83,6 +46,14 @@ const { result } = useQuery(ALL_LOCATIONS_QUERY, null, {
   },
 })
 
+const { result: usersResult } = useQuery(ALL_USERS_QUERY, null, {
+  context: {
+    headers: {
+      Authorization: `Bearer ${authStore.token}`,
+    },
+  },
+})
+
 const locations = ref([])
 const events = ref([])
 const calendarRef = ref(null)
@@ -106,16 +77,30 @@ const handleOpen = () => {
 watch(eventsResult, (newVal) => {
   if (newVal && newVal.events) {
     const formatted = newVal.events.data.map((event) => {
+      console.log(
+        event.id,
+        event.title,
+        event.createdBy.id === authStore.user.id,
+        event.createdBy.firstName
+      )
       return {
         ...event,
         id: event.id,
         title: event.title,
         start: new Date(event.startDate),
         end: new Date(event.endDate),
+        backgroundColor: event.createdBy.id === authStore.user.id ? '#6250e6' : '#f0d58b',
       }
     })
 
     eventsStore.addEvents(formatted)
+  }
+})
+
+watch(usersResult, () => {
+  if (usersResult.value && usersResult.value.users) {
+    console.log(usersResult.value.users)
+    usersStore.setUsers(usersResult.value.users)
   }
 })
 
@@ -148,6 +133,7 @@ watch(currentEvent, (newVal) => {
 const handleEventClick = (info) => {
   const event = eventsStore.getEvent(info.event.id)
   if (event) {
+    console.log(event)
     currentEvent.value = event
   }
 }
