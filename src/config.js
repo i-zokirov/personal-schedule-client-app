@@ -1,6 +1,6 @@
 export const localhost = 'http://localhost:5000'
 export const deployment = 'https://schedule-api-411220.df.r.appspot.com'
-export const wsDeployment = 'ws://schedule-api-411220.df.r.appspot.com'
+export const wsDeployment = 'wss://schedule-api-411220.df.r.appspot.com'
 export const WS_API_URL = wsDeployment
 export const API_URL = deployment
 
