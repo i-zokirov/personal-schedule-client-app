@@ -34,6 +34,8 @@ const values = ref({
   emails: `${authStore.user.email}, `,
 })
 
+const disableButtons = ref(false)
+
 const props = defineProps({
   open: Boolean,
   close: Function,
@@ -70,6 +72,7 @@ const { mutate } = useMutation(CREATE_EVENT_MUTATION, {
 })
 const handleSubmit = async () => {
   try {
+    disableButtons.value = true
     await validationSchema.validate(values.value, { abortEarly: false })
 
     const response = await mutate({
@@ -82,6 +85,8 @@ const handleSubmit = async () => {
         participants: values.value.emails.split(',').map((email) => email.trim()) ?? [],
       },
     })
+
+    disableButtons.value = false
 
     if (response) {
       eventsStore.addSingleEvent({
@@ -97,6 +102,7 @@ const handleSubmit = async () => {
 
     // Handle success logic here, e.g., close dialog
   } catch (err) {
+    disableButtons.value = false
     if (err.inner) {
       err.inner.forEach((e) => {
         errors.value[e.path] = e.message
@@ -303,7 +309,12 @@ watch(
 
             <button
               type="submit"
-              class="mr-3 inline-flex justify-center w-full rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none"
+              :disabled="disableButtons"
+              class="mr-3 inline-flex justify-center w-full rounded-md border border-transparent shadow-sm px-4 py-2 text-base font-medium text-white focus:outline-none"
+              :class="{
+                'bg-gray-500 cursor-not-allowed': disableButtons,
+                'bg-red-600 hover:bg-indigo-700': !disableButtons,
+              }"
             >
               Save
             </button>

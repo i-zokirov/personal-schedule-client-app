@@ -38,10 +38,13 @@ const values = ref({
   timezone: '',
 })
 
+const disableButtons = ref(false)
+
 watch(
   currentEvent,
   (newVal) => {
     if (newVal) {
+      disabledInput.value = currentEvent.value.createdBy.id !== authStore.user.id
       values.value = {
         id: currentEvent.value.id,
         title: currentEvent.value.title,
@@ -104,13 +107,17 @@ const { mutate: deleteEvent } = useMutation(DELETE_EVENT_MUTATION, {
 const handleDelete = async () => {
   try {
     console.log('removing', values.value.id)
+    disableButtons.value = true
     await deleteEvent({
       id: values.value.id,
     })
 
+    disableButtons.value = false
+
     eventsStore.removeEventById(values.value.id)
     props.close()
   } catch (err) {
+    disableButtons.value = false
     const errormessage =
       err.response && err.response.data && err.response.data.message
         ? err.response.data.message
@@ -123,8 +130,10 @@ const handleDelete = async () => {
 
 const handleSubmit = async () => {
   try {
+    disableButtons.value = true
     await validationSchema.validate(values.value, { abortEarly: false })
 
+    disableButtons.value = false
     const input = {
       id: values.value.id,
       title: values.value.title,
@@ -162,6 +171,7 @@ const handleSubmit = async () => {
 
     props.close()
   } catch (err) {
+    disableButtons.value = false
     if (err.inner) {
       err.inner.forEach((e) => {
         errors.value[e.path] = e.message
@@ -372,25 +382,27 @@ watch(
             </button>
 
             <button
-              :disabled="disabledInput"
+              :disabled="disableButtons"
+              v-if="!disabledInput"
               type="button"
               @click="handleDelete"
               class="mr-3 inline-flex justify-center w-full rounded-md border border-transparent shadow-sm px-4 py-2 text-base font-medium text-white focus:outline-none"
               :class="{
-                'bg-gray-500 cursor-not-allowed': disabledInput,
-                'bg-red-600 hover:bg-indigo-700': !disabledInput,
+                'bg-gray-500 cursor-not-allowed': disableButtons,
+                'bg-red-600 hover:bg-indigo-700': !disableButtons,
               }"
             >
               Delete
             </button>
 
             <button
-              :disabled="disabledInput"
+              v-if="!disabledInput"
+              :disabled="disableButtons"
               type="submit"
               class="mr-3 inline-flex justify-center w-full rounded-md border border-transparent shadow-sm px-4 py-2 text-base font-medium text-white focus:outline-none"
               :class="{
-                'bg-gray-500 cursor-not-allowed': disabledInput,
-                'bg-red-600 hover:bg-indigo-700': !disabledInput,
+                'bg-gray-500 cursor-not-allowed': disableButtons,
+                'bg-red-600 hover:bg-indigo-700': !disableButtons,
               }"
             >
               Save
