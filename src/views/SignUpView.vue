@@ -178,7 +178,7 @@ export default {
               lastName: this.form.lastName,
             })
             this.loading = false
-            this.$router.push({ name: 'home' })
+            this.$router.push({ name: 'checkauth' })
           } catch (err) {
             this.loading = false
             const errormessage =

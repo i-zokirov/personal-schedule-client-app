@@ -1,4 +1,14 @@
-<script setup></script>
+<script setup>
+import { useAuthStore } from '@/stores/auth'
+import { useRouter } from 'vue-router'
+
+const authStore = useAuthStore()
+const router = useRouter()
+const handleLogout = () => {
+  authStore.logout()
+  router.push('/login')
+}
+</script>
 
 <template>
   <header class="bg-white">
@@ -25,7 +35,7 @@
       </div>
 
       <div class="lg:flex lg:flex-1 lg:justify-end">
-        <a href="#" class="text-sm font-semibold leading-6 text-gray-900"
+        <a @click="handleLogout" href="#" class="text-sm font-semibold leading-6 text-gray-900"
           >Log out <span aria-hidden="true">&rarr;</span></a
         >
       </div>

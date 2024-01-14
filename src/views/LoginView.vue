@@ -128,7 +128,7 @@ export default {
           try {
             this.loading = true
             await authStore.login({ email: this.form.email, password: this.form.password })
-            this.$router.push({ name: 'home' })
+            this.$router.push({ name: 'checkauth' })
           } catch (err) {
             this.loading = false
             const errormessage =

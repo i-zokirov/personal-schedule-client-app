@@ -54,16 +54,16 @@ const router = createRouter({
       path: '/checkauth',
       name: 'checkauth',
       component: () => import('../views/AuthStateCheck.vue'),
-      beforeEnter: (to, from, next) => {
-        const authStore = useAuthStore()
-        if (authStore.user && authStore.token) {
-          next({ name: 'home' })
-        } else if (authStore.initialized) {
-          next({ name: 'login' })
-        } else {
-          next()
-        }
-      },
+      // beforeEnter: (to, from, next) => {
+      //   const authStore = useAuthStore()
+      //   if (authStore.user && authStore.token) {
+      //     next({ name: 'home' })
+      //   } else if (authStore.initialized) {
+      //     next({ name: 'login' })
+      //   } else {
+      //     next()
+      //   }
+      // },
     },
   ],
 })

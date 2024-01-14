@@ -74,6 +74,12 @@ export const CREATE_EVENT_MUTATION = gql`
         firstName
         lastName
       }
+      participants {
+        id
+        firstName
+        lastName
+        email
+      }
       createdAt
       updatedAt
     }
@@ -97,8 +103,22 @@ export const UPDATE_EVENT_MUTATION = gql`
         firstName
         lastName
       }
+      participants {
+        id
+        firstName
+        lastName
+        email
+      }
       createdAt
       updatedAt
+    }
+  }
+`
+
+export const DELETE_EVENT_MUTATION = gql`
+  mutation DeleteEvent($id: String!) {
+    removeEvent(id: $id) {
+      title
     }
   }
 `

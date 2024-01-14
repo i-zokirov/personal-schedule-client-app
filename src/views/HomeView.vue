@@ -3,6 +3,7 @@ import { ALL_LOCATIONS_QUERY, ALL_USERS_QUERY, FIND_MANY_EVENTS_QUERY } from '@/
 import CreateEventForm from '@/components/CreateEventForm.vue'
 import EditEventForm from '@/components/EditEventForm.vue'
 import NavbarComponent from '@/components/NavbarComponent.vue'
+import { OWNED_EVENT_COLOR, PARTICIPATED_EVENT_COLOR } from '@/config'
 import { useAuthStore } from '@/stores/auth'
 import { useEventsStore } from '@/stores/events'
 import { useUsersStore } from '@/stores/users'
@@ -77,19 +78,14 @@ const handleOpen = () => {
 watch(eventsResult, (newVal) => {
   if (newVal && newVal.events) {
     const formatted = newVal.events.data.map((event) => {
-      console.log(
-        event.id,
-        event.title,
-        event.createdBy.id === authStore.user.id,
-        event.createdBy.firstName
-      )
       return {
         ...event,
         id: event.id,
         title: event.title,
         start: new Date(event.startDate),
         end: new Date(event.endDate),
-        backgroundColor: event.createdBy.id === authStore.user.id ? '#6250e6' : '#f0d58b',
+        backgroundColor:
+          event.createdBy.id === authStore.user.id ? OWNED_EVENT_COLOR : PARTICIPATED_EVENT_COLOR,
       }
     })
 

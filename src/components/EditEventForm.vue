@@ -1,5 +1,5 @@
 <script setup>
-import { UPDATE_EVENT_MUTATION } from '@/apollo/queries'
+import { DELETE_EVENT_MUTATION, UPDATE_EVENT_MUTATION } from '@/apollo/queries'
 import DialogComponent from '@/components/DialogComponent.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useEventsStore } from '@/stores/events'
@@ -42,7 +42,6 @@ watch(
   currentEvent,
   (newVal) => {
     if (newVal) {
-      disabledInput.value = currentEvent.value.createdBy.id !== authStore.user.id
       values.value = {
         id: currentEvent.value.id,
         title: currentEvent.value.title,
@@ -90,6 +89,37 @@ const { mutate } = useMutation(UPDATE_EVENT_MUTATION, {
     },
   },
 })
+
+const { mutate: deleteEvent } = useMutation(DELETE_EVENT_MUTATION, {
+  context: {
+    headers: {
+      Authorization: `Bearer ${authStore.token}`,
+    },
+  },
+  variables: {
+    id: values.value.id,
+  },
+})
+
+const handleDelete = async () => {
+  try {
+    console.log('removing', values.value.id)
+    await deleteEvent({
+      id: values.value.id,
+    })
+
+    eventsStore.removeEventById(values.value.id)
+    props.close()
+  } catch (err) {
+    const errormessage =
+      err.response && err.response.data && err.response.data.message
+        ? err.response.data.message
+        : err.message
+
+    console.log(err)
+    alert(errormessage)
+  }
+}
 
 const handleSubmit = async () => {
   try {
@@ -339,6 +369,19 @@ watch(
               @click="close"
             >
               Close
+            </button>
+
+            <button
+              :disabled="disabledInput"
+              type="button"
+              @click="handleDelete"
+              class="mr-3 inline-flex justify-center w-full rounded-md border border-transparent shadow-sm px-4 py-2 text-base font-medium text-white focus:outline-none"
+              :class="{
+                'bg-gray-500 cursor-not-allowed': disabledInput,
+                'bg-red-600 hover:bg-indigo-700': !disabledInput,
+              }"
+            >
+              Delete
             </button>
 
             <button

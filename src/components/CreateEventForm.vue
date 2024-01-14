@@ -1,3 +1,170 @@
+<script setup>
+import { CREATE_EVENT_MUTATION } from '@/apollo/queries'
+import DialogComponent from '@/components/DialogComponent.vue'
+import { OWNED_EVENT_COLOR } from '@/config'
+import { useAuthStore } from '@/stores/auth'
+import { useEventsStore } from '@/stores/events'
+import { useMutation } from '@vue/apollo-composable'
+import { ref, watch } from 'vue'
+import * as Yup from 'yup'
+
+const authStore = useAuthStore()
+const eventsStore = useEventsStore()
+
+const validationSchema = Yup.object({
+  title: Yup.string().required('Title is required'),
+  description: Yup.string(),
+  location: Yup.string(),
+  startDate: Yup.string().required('Start Date is required'),
+  endDate: Yup.string().required('End Date is required'),
+  emails: Yup.string(),
+})
+
+const now = new Date().toISOString().slice(0, -8)
+const later = new Date(new Date().setMinutes(new Date().getMinutes() + 60))
+  .toISOString()
+  .slice(0, -8)
+
+const values = ref({
+  title: '',
+  description: '',
+  location: '',
+  startDate: now,
+  endDate: later,
+  emails: `${authStore.user.email}, `,
+})
+
+const props = defineProps({
+  open: Boolean,
+  close: Function,
+  locations: Array,
+})
+
+const errors = ref({})
+
+const validate = (field) => {
+  validationSchema
+    .validateAt(field, values.value)
+    .then(() => (errors.value[field] = ''))
+    .catch((err) => {
+      errors.value[err.path] = err.message
+    })
+}
+
+const { mutate } = useMutation(CREATE_EVENT_MUTATION, {
+  context: {
+    headers: {
+      Authorization: `Bearer ${authStore.token}`,
+    },
+  },
+  variables: {
+    input: {
+      title: values.value.title,
+      description: values.value.description,
+      startDate: values.value.startDate,
+      endDate: values.value.endDate,
+      locationId: values.value.location,
+      participants: values.value.emails.split(',').map((email) => email.trim()),
+    },
+  },
+})
+const handleSubmit = async () => {
+  try {
+    await validationSchema.validate(values.value, { abortEarly: false })
+
+    const response = await mutate({
+      input: {
+        title: values.value.title,
+        description: values.value.description,
+        startDate: values.value.startDate,
+        endDate: values.value.endDate,
+        locationId: values.value.location,
+        participants: values.value.emails.split(',').map((email) => email.trim()) ?? [],
+      },
+    })
+
+    if (response) {
+      eventsStore.addSingleEvent({
+        ...response.data.createEvent,
+        start: new Date(response.data.createEvent.startDate),
+        end: new Date(response.data.createEvent.endDate),
+        backgroundColor: OWNED_EVENT_COLOR,
+      })
+
+      console.log(response)
+    }
+    props.close()
+
+    // Handle success logic here, e.g., close dialog
+  } catch (err) {
+    if (err.inner) {
+      err.inner.forEach((e) => {
+        errors.value[e.path] = e.message
+      })
+    } else {
+      const errormessage =
+        err.response && err.response.data && err.response.data.message
+          ? err.response.data.message
+          : err.message
+
+      console.log(err)
+      alert(errormessage)
+      // Handle error logic here
+    }
+  }
+}
+
+defineEmits(['close'])
+
+// Watch for changes in values.title and call validate
+watch(
+  () => values.value.title,
+  () => {
+    validate('title')
+  }
+)
+
+// Watch for changes in values.description and call validate
+watch(
+  () => values.value.description,
+  () => {
+    validate('description')
+  }
+)
+
+// Watch for changes in values.location and call validate
+watch(
+  () => values.value.location,
+  () => {
+    validate('location')
+  }
+)
+
+// Watch for changes in values.startDate and call validate
+watch(
+  () => values.value.startDate,
+  () => {
+    validate('startDate')
+  }
+)
+
+// Watch for changes in values.endDate and call validate
+watch(
+  () => values.value.endDate,
+  () => {
+    validate('endDate')
+  }
+)
+
+// Watch for changes in values.emails and call validate
+watch(
+  () => values.value.emails,
+  () => {
+    validate('emails')
+  }
+)
+</script>
+
 <template>
   <div>
     <DialogComponent :open="open" :close="close">
@@ -109,6 +276,22 @@
             </div>
           </div>
 
+          <div class="sm:col-span-3">
+            <label for="emails" class="block text-sm font-medium text-gray-700 sm:mt-px sm:pt-2">
+              Participant emails (comma separated)
+            </label>
+            <div class="mt-1 sm:mt-0 sm:col-span-2">
+              <textarea
+                id="emails"
+                name="emails"
+                rows="3"
+                v-model="values.emails"
+                class="max-w-lg shadow-sm block w-full focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm border-gray-300 rounded-md"
+              ></textarea>
+            </div>
+            <span class="text-red-500" v-if="errors.emails">{{ errors.emails }}</span>
+          </div>
+
           <div class="sm:flex sm:flex-row-reverse sm:px-6 mt-4">
             <button
               type="button"
@@ -130,151 +313,6 @@
     </DialogComponent>
   </div>
 </template>
-
-<script setup>
-import { CREATE_EVENT_MUTATION } from '@/apollo/queries'
-import DialogComponent from '@/components/DialogComponent.vue'
-import { useAuthStore } from '@/stores/auth'
-import { useEventsStore } from '@/stores/events'
-import { useMutation } from '@vue/apollo-composable'
-import { ref, watch } from 'vue'
-import * as Yup from 'yup'
-
-const validationSchema = Yup.object({
-  title: Yup.string().required('Title is required'),
-  description: Yup.string(),
-  location: Yup.string(),
-  startDate: Yup.string().required('Start Date is required'),
-  endDate: Yup.string().required('End Date is required'),
-})
-
-const values = ref({
-  title: '',
-  description: '',
-  location: '',
-  startDate: '',
-  endDate: '',
-})
-
-const props = defineProps({
-  open: Boolean,
-  close: Function,
-  locations: Array,
-})
-
-const errors = ref({})
-
-const validate = (field) => {
-  validationSchema
-    .validateAt(field, values.value)
-    .then(() => (errors.value[field] = ''))
-    .catch((err) => {
-      errors.value[err.path] = err.message
-    })
-}
-
-const authStore = useAuthStore()
-const eventsStore = useEventsStore()
-const { mutate } = useMutation(CREATE_EVENT_MUTATION, {
-  context: {
-    headers: {
-      Authorization: `Bearer ${authStore.token}`,
-    },
-  },
-  variables: {
-    input: {
-      title: values.value.title,
-      description: values.value.description,
-      startDate: values.value.startDate,
-      endDate: values.value.endDate,
-    },
-  },
-})
-const handleSubmit = async () => {
-  try {
-    await validationSchema.validate(values.value, { abortEarly: false })
-
-    const response = await mutate({
-      input: {
-        title: values.value.title,
-        description: values.value.description,
-        startDate: values.value.startDate,
-        endDate: values.value.endDate,
-      },
-    })
-
-    if (response) {
-      eventsStore.addSingleEvent({
-        ...response.data.createEvent,
-        start: new Date(response.data.createEvent.startDate),
-        end: new Date(response.data.createEvent.endDate),
-      })
-
-      console.log(response)
-    }
-    props.close()
-
-    // Handle success logic here, e.g., close dialog
-  } catch (err) {
-    if (err.inner) {
-      err.inner.forEach((e) => {
-        errors.value[e.path] = e.message
-      })
-    } else {
-      const errormessage =
-        err.response && err.response.data && err.response.data.message
-          ? err.response.data.message
-          : err.message
-
-      console.log(err)
-      alert(errormessage)
-      // Handle error logic here
-    }
-  }
-}
-
-defineEmits(['close'])
-
-// Watch for changes in values.title and call validate
-watch(
-  () => values.value.title,
-  () => {
-    validate('title')
-  }
-)
-
-// Watch for changes in values.description and call validate
-watch(
-  () => values.value.description,
-  () => {
-    validate('description')
-  }
-)
-
-// Watch for changes in values.location and call validate
-watch(
-  () => values.value.location,
-  () => {
-    validate('location')
-  }
-)
-
-// Watch for changes in values.startDate and call validate
-watch(
-  () => values.value.startDate,
-  () => {
-    validate('startDate')
-  }
-)
-
-// Watch for changes in values.endDate and call validate
-watch(
-  () => values.value.endDate,
-  () => {
-    validate('endDate')
-  }
-)
-</script>
 
 <style scoped>
 /* Your component styles go here */

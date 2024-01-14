@@ -28,6 +28,10 @@ export const useEventsStore = defineStore('events', {
       const filtered = this.events.filter((e) => e.id !== event.id)
       this.events = filtered
     },
+    removeEventById(id) {
+      const filtered = this.events.filter((e) => e.id !== id)
+      this.events = filtered
+    },
     updateEvent(event) {
       const updated = this.events.map((e) => {
         if (e.id === event.id) {
