@@ -2,7 +2,7 @@
 import { io } from 'socket.io-client'
 import { ref, watch } from 'vue'
 import { RouterView } from 'vue-router'
-import { OWNED_EVENT_COLOR, PARTICIPATED_EVENT_COLOR } from './config'
+import { OWNED_EVENT_COLOR, PARTICIPATED_EVENT_COLOR, WS_API_URL } from './config'
 import { useAuthStore } from './stores/auth'
 import { useEventsStore } from './stores/events'
 
@@ -12,7 +12,7 @@ const eventsStore = useEventsStore()
 
 watch(authStore, () => {
   if (authStore.token && !socket.value) {
-    socket.value = io('ws://localhost:5000', {
+    socket.value = io(WS_API_URL, {
       extraHeaders: {
         Authorization: `Bearer ${authStore.token}`,
       },
