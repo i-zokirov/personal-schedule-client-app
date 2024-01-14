@@ -18,26 +18,12 @@ const eventsStore = useEventsStore()
 const authStore = useAuthStore()
 const usersStore = useUsersStore()
 
-const getEvents = (variables) => {
-  return useQuery(FIND_MANY_EVENTS_QUERY, variables, {
-    context: {
-      headers: {
-        Authorization: `Bearer ${authStore.token}`,
-      },
-    },
-  })
-}
-
 const variables = ref({
   input: {
-    from: '2024-01-01',
-    to: '2024-01-31',
     limit: 100,
     page: 1,
   },
 })
-
-const { result: eventsResult } = getEvents(variables.value)
 
 const { result } = useQuery(ALL_LOCATIONS_QUERY, null, {
   context: {
@@ -55,11 +41,20 @@ const { result: usersResult } = useQuery(ALL_USERS_QUERY, null, {
   },
 })
 
+const { result: eventsResult, refetch } = useQuery(FIND_MANY_EVENTS_QUERY, variables, {
+  context: {
+    headers: {
+      Authorization: `Bearer ${authStore.token}`,
+    },
+  },
+})
+
 const locations = ref([])
 const events = ref([])
 const calendarRef = ref(null)
 const open = ref(false)
 const currentEvent = ref(null)
+const selectedLocation = ref('')
 const openEditEventForm = ref(Boolean(currentEvent.value))
 
 const closeEditEventForm = () => {
@@ -74,24 +69,6 @@ const close = () => {
 const handleOpen = () => {
   open.value = true
 }
-
-watch(eventsResult, (newVal) => {
-  if (newVal && newVal.events) {
-    const formatted = newVal.events.data.map((event) => {
-      return {
-        ...event,
-        id: event.id,
-        title: event.title,
-        start: new Date(event.startDate),
-        end: new Date(event.endDate),
-        backgroundColor:
-          event.createdBy.id === authStore.user.id ? OWNED_EVENT_COLOR : PARTICIPATED_EVENT_COLOR,
-      }
-    })
-
-    eventsStore.addEvents(formatted)
-  }
-})
 
 watch(usersResult, () => {
   if (usersResult.value && usersResult.value.users) {
@@ -123,6 +100,55 @@ watch(events, (newVal) => {
 watch(currentEvent, (newVal) => {
   if (newVal) {
     openEditEventForm.value = true
+  }
+})
+
+watch(selectedLocation, (newVal) => {
+  if (newVal && newVal !== '') {
+    variables.value = {
+      input: {
+        limit: 100,
+        page: 1,
+        locationId: newVal,
+      },
+    }
+  } else {
+    variables.value = {
+      input: {
+        limit: 100,
+        page: 1,
+      },
+    }
+  }
+})
+
+watch(variables, (newVal) => {
+  if (newVal) {
+    refetch({
+      input: {
+        limit: newVal.input.limit,
+        page: newVal.input.page,
+        locationId: newVal.input.locationId,
+      },
+    })
+  }
+})
+
+watch(eventsResult, (newVal) => {
+  if (newVal && newVal.events) {
+    const formatted = newVal.events.data.map((event) => {
+      return {
+        ...event,
+        id: event.id,
+        title: event.title,
+        start: new Date(event.startDate),
+        end: new Date(event.endDate),
+        backgroundColor:
+          event.createdBy.id === authStore.user.id ? OWNED_EVENT_COLOR : PARTICIPATED_EVENT_COLOR,
+      }
+    })
+
+    eventsStore.addEvents(formatted)
   }
 })
 
@@ -164,38 +190,33 @@ const calendarOptions = {
       :currentEvent="currentEvent"
     />
     <div class="p-6 lg:px-8">
-      <button
-        type="button"
-        class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none"
-        @click="handleOpen"
-      >
-        Create Event
-      </button>
+      <div>
+        <button
+          type="button"
+          class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none"
+          @click="handleOpen"
+        >
+          Create Event
+        </button>
+
+        <select
+          v-model="selectedLocation"
+          class="ml-4 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+        >
+          <option value="">All Locations</option>
+          <option v-for="location in locations" :key="location.id" :value="location.id">
+            {{ location.name }}
+          </option>
+        </select>
+      </div>
 
       <FullCalendar ref="calendarRef" :options="calendarOptions">
         <template v-slot:eventContent="arg">
           <b>{{ arg.timeText }}</b>
           <i>{{ arg.event.title }}</i>
+          <span v-if="arg.event.location">{{ arg.event.location.name }}</span>
         </template>
       </FullCalendar>
-
-      <div>
-        <h2 class="text-lg leading-6 font-medium text-gray-900">Locations</h2>
-        <div class="mt-1 grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div
-            v-for="location in locations"
-            :key="location.id"
-            class="bg-white overflow-hidden shadow rounded-lg"
-          >
-            <div class="px-4 py-5 sm:p-6">
-              <dl>
-                <dt class="text-sm font-medium text-gray-500 truncate">Name</dt>
-                <dd class="mt-1 text-sm text-gray-900 truncate">{{ location.name }}</dd>
-              </dl>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   </main>
 </template>

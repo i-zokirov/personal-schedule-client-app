@@ -7,14 +7,7 @@ export const useEventsStore = defineStore('events', {
 
   actions: {
     addEvents(events) {
-      console.log(events)
-      const existingEvents = this.events
-
-      const newEvents = events.filter((event) => {
-        return !existingEvents.some((e) => e.id === event.id)
-      })
-
-      this.events = [...existingEvents, ...newEvents]
+      this.events = events
     },
     addSingleEvent(event) {
       if (!this.events.some((e) => e.id === event.id)) {
