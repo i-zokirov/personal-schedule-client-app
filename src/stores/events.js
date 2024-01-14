@@ -11,6 +11,7 @@ export const useEventsStore = defineStore('events', {
     },
     addSingleEvent(event) {
       if (!this.events.some((e) => e.id === event.id)) {
+        console.log('adding event', event)
         this.events = [...this.events, event]
       }
     },
