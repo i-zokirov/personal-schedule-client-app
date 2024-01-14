@@ -6,6 +6,7 @@ import NavbarComponent from '@/components/NavbarComponent.vue'
 import { OWNED_EVENT_COLOR, PARTICIPATED_EVENT_COLOR } from '@/config'
 import { useAuthStore } from '@/stores/auth'
 import { useEventsStore } from '@/stores/events'
+import { useLocationsStore } from '@/stores/locations'
 import { useUsersStore } from '@/stores/users'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import interactionPlugin from '@fullcalendar/interaction'
@@ -17,6 +18,7 @@ import { ref, watch } from 'vue'
 const eventsStore = useEventsStore()
 const authStore = useAuthStore()
 const usersStore = useUsersStore()
+const locationsStore = useLocationsStore()
 
 const variables = ref({
   input: {
@@ -49,7 +51,6 @@ const { result: eventsResult, refetch } = useQuery(FIND_MANY_EVENTS_QUERY, varia
   },
 })
 
-const locations = ref([])
 const events = ref([])
 const calendarRef = ref(null)
 const open = ref(false)
@@ -87,7 +88,7 @@ watch(eventsStore, () => {
 
 watch(result, (newVal) => {
   if (newVal && newVal.locations) {
-    locations.value = newVal.locations
+    locationsStore.addLocations(newVal.locations)
   }
 })
 
@@ -182,11 +183,11 @@ const calendarOptions = {
 <template>
   <main>
     <NavbarComponent />
-    <CreateEventForm :open="open" :close="close" :locations="locations" />
+    <CreateEventForm :open="open" :close="close" :locations="locationsStore.locations" />
     <EditEventForm
       :open="openEditEventForm"
       :close="closeEditEventForm"
-      :locations="locations"
+      :locations="locationsStore.locations"
       :currentEvent="currentEvent"
     />
     <div class="p-6 lg:px-8">
@@ -204,7 +205,11 @@ const calendarOptions = {
           class="ml-4 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
         >
           <option value="">All Locations</option>
-          <option v-for="location in locations" :key="location.id" :value="location.id">
+          <option
+            v-for="location in locationsStore.locations"
+            :key="location.id"
+            :value="location.id"
+          >
             {{ location.name }}
           </option>
         </select>

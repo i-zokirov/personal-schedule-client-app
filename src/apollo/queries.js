@@ -122,3 +122,31 @@ export const DELETE_EVENT_MUTATION = gql`
     }
   }
 `
+
+export const CREATE_LOCATION_MUTATION = gql`
+  mutation CreateLocation($input: CreateLocationInput!) {
+    createLocation(createLocationInput: $input) {
+      id
+      name
+      locationCode
+    }
+  }
+`
+
+export const DELETE_LOCATION_MUTATION = gql`
+  mutation DeleteLocation($id: String!) {
+    removeLocation(id: $id) {
+      name
+    }
+  }
+`
+
+export const UPDATE_LOCATION_MUTATION = gql`
+  mutation UpdateLocation($input: UpdateLocationInput!) {
+    updateLocation(updateLocationInput: $input) {
+      id
+      name
+      locationCode
+    }
+  }
+`
