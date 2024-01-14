@@ -1,29 +1,28 @@
-# schedule
+## Completed Tasks
 
-This template should help get you started developing with Vue 3 in Vite.
-
-## Recommended IDE Setup
-
-[VSCode](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur) + [TypeScript Vue Plugin (Volar)](https://marketplace.visualstudio.com/items?itemName=Vue.vscode-typescript-vue-plugin).
-
-## Customize configuration
-
-See [Vite Configuration Reference](https://vitejs.dev/config/).
+- [x] Authentication: User login, logout, and signup with JWT
+- [x] Authorization: User can only view their own events or events in which they are participating
+- [x] Event Creation: User can create an event
+- [x] Event Editing: User can edit an event
+- [x] Event Deletion: User can delete an event
+- [x] Location: User can add a location to an event
+- [x] CRUD operations for Events and Locations
+- [x] Websocket: User can see events in real-time
 
 ## Project Setup
 
 ```sh
-npm install
+yarn install
 ```
 
 ### Compile and Hot-Reload for Development
 
 ```sh
-npm run dev
+yarn dev
 ```
 
 ### Compile and Minify for Production
 
 ```sh
-npm run build
+yarn build
 ```
