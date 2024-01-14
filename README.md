@@ -8,6 +8,7 @@
 - [x] Location: User can add a location to an event
 - [x] CRUD operations for Events and Locations
 - [x] Websocket: User can see events in real-time
+- [x] Vue.js: Frontend is built with Vue.js and Pinia is used for state management
 
 ## Project Setup
 
